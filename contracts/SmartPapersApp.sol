@@ -2,6 +2,7 @@ pragma solidity ^0.4.24;
 
 /*
     Copyright 2018-2019, Michal R. Hoffman <M.R.Hoffman@soton.ac.uk>
+    University of Southampton
 
     This program is free software: you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
@@ -24,12 +25,15 @@ import "@aragon/os/contracts/lib/math/SafeMath.sol";
 
 contract SmartPapersApp is AragonApp {
     using SafeMath for uint256;
+    using SafeMath for uint64;
 
     /// Events
     event IncrementCitations(address indexed entity, uint256 step);
     event DecrementCitations(address indexed entity, uint256 step);
-    event CreatePaper(address indexed entity, uint256 paperId);
-
+    event CreatePaper(address indexed entity, uint64 paperId);
+    event CreateVersion(address indexed entity, uint256 versionId);
+    event PublishPaper(address indexed entity, uint64 paperId);
+    
     /// State
     uint256 public value;
 
@@ -82,7 +86,7 @@ contract SmartPapersApp is AragonApp {
     uint64 public numPapers;
     uint256 public numVersions;
 
-    modifier paperExists(uint64  _paperId) {
+    modifier paperExists(uint64 _paperId) {
         require(_paperId < numPapers, ERROR_NO_PAPER);
         _;
     }
@@ -122,12 +126,44 @@ contract SmartPapersApp is AragonApp {
      */
     function newPaper(string _metadata) external auth(CREATE_PAPERS_ROLE) returns (uint64 paperId) {
         paperId = numPapers++;
-	uint256 versionId = numVersions++;
+    	uint256 versionId = numVersions++;
         papers[paperId] = SmartPaper(paperId, msg.sender, new address[](0), getTimestamp64(),
-			 50*10e16, 1, _metadata, new uint256[](0), false, 0, 0);
-	versions[versionId] = Version(versionId, msg.sender, new address[](0),
-                        getTimestamp64(), "InitialVersion", IpfsMultihash(0,0,0), false);
-	papers[paperId].versionIds.push(versionId);
+	                		 50*10e16, 1, _metadata, new uint256[](0), false, 0, 0);
+    	versions[versionId] = Version(versionId, msg.sender, new address[](0),
+                                 getTimestamp64(), "InitialVersion", IpfsMultihash(0,0,0), false);
+	    papers[paperId].versionIds.push(versionId);
         emit CreatePaper(msg.sender, paperId);
+    }
+    
+    /**
+     * @notice Add a new Version to an existing Smart Paper
+     * @param paperId The Smart Papers ID identifying this paper
+     */
+    function addVersion(uint64 paperId) returns (uint256 versionId){
+    	versionId = numVersions++;
+    	versions[versionId] = Version(versionId, msg.sender, new address[](0),
+                                 getTimestamp64(), "", IpfsMultihash(0,0,0), false);
+        papers[paperId].versionIds.push(versionId);
+        return versionId;
+    }
+    
+    /**
+     * @notice Create a vote to publish an existing SmartPaper with a particular VersionId
+     * @param paperId The Smart Papers ID identifying this paper
+     * @param versionId the correct version to be published
+     * Notice: integration with the Voting app needs further testing!!
+     * To-DO: automate DAO integration of SP & Voting apps with a script
+     */
+     function publishPaperNewVote(uint64 paperId, uint256 versionId){
+         //
+         //votingApp.newVote(bytes _executionScript, string _metadata)
+         //
+     }
+    
+    //This gets called when the vote was successful
+    function publishPaperExecuteVote(uint64 paperId, uint256 versionId){
+        SmartPaper storage paper = papers[paperId];
+        paper.published = true;
+        paper.publishedVersionId=versionId;
     }
 }
