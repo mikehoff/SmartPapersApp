@@ -1,6 +1,8 @@
 # Smart Papers App for Aragon (Ethereum)
 
 This app allows you to connect to your Aragon DAO and create new Smart Papers.
+ ![UML](SmartPaper.png)
+
 
 
 ## Usage
